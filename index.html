@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vision Reader | Fast & Modern PDF Viewer</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+
+  <!-- ===================== COMPACT TOP TOOLBAR ===================== -->
+  <header class="toolbar">
+
+    <div class="toolbar-left">
+      <button id="menuToggle" class="tool-btn" title="Menu (Alt+M)">☰</button>
+      <img src="assets/logo.png" alt="Logo" class="logo" />
+      <span class="app-title">Vision Reader</span>
+
+      <!-- Hamburger dropdown -->
+      <div id="mainMenu" class="main-menu hidden">
+        <button id="menuHomeBtn" class="main-menu-item">🏠 Home (Open New PDF)</button>
+        <button id="menuPrintBtn" class="main-menu-item">🖨️ Print (Ctrl+P)</button>
+        <button id="menuHelpBtn" class="main-menu-item">❓ Help / Shortcuts</button>
+      </div>
+    </div>
+
+    <div class="toolbar-center">
+
+      <div class="open-btn-group">
+        <button id="openBtn" class="tool-btn" title="Open PDF (Ctrl+O)">📂</button>
+        <button id="recentFilesToggle" class="tool-btn recent-files-toggle" title="Recent Files">▾</button>
+        <input type="file" id="fileInput" accept="application/pdf" hidden />
+        <div id="recentFilesPanel" class="recent-files-panel hidden">
+          <div class="recent-files-header">
+            <span>Recent Files</span>
+            <button id="clearRecentBtn" class="recent-files-clear">Clear All</button>
+          </div>
+          <ul id="recentFilesList" class="recent-files-list"></ul>
+          <p id="recentFilesEmpty" class="recent-files-empty">No recent files yet.</p>
+        </div>
+      </div>
+
+      <button id="prevPageBtn" class="tool-btn" title="Previous Page (←)">◀</button>
+      <input type="number" id="pageNumInput" class="page-input" min="1" value="1" title="Jump to page" />
+      <span class="page-separator">/</span>
+      <span id="totalPages" class="total-pages">0</span>
+      <button id="nextPageBtn" class="tool-btn" title="Next Page (→)">▶</button>
+
+      <button id="zoomOutBtn" class="tool-btn zoom-btn" title="Zoom Out (-)">🔍−</button>
+      <span id="zoomLevel" class="zoom-level">100%</span>
+      <button id="zoomInBtn" class="tool-btn zoom-btn" title="Zoom In (+)">🔍+</button>
+
+      <button id="fitWidthBtn" class="tool-btn" title="Fit Width">↔</button>
+      <button id="fitPageBtn" class="tool-btn" title="Fit Page">⛶</button>
+      <button id="fitHeightBtn" class="tool-btn" title="Fit Height (h)">↕</button>
+
+      <button id="rotateLeftBtn" class="tool-btn" title="Rotate Left (Shift+R)">⟲</button>
+      <button id="rotateRightBtn" class="tool-btn" title="Rotate Right (r)">⟳</button>
+    </div>
+
+    <div class="toolbar-right">
+      <div class="view-mode-group" role="group" aria-label="View mode">
+        <button id="viewModeSingleBtn" class="tool-btn view-mode-btn" title="Single Page">📄</button>
+        <button id="viewModeContinuousBtn" class="tool-btn view-mode-btn active-state" title="Continuous Scroll">📜</button>
+        <button id="viewModeTwoPageBtn" class="tool-btn view-mode-btn" title="Two-Page">📖</button>
+        <button id="presentationModeBtn" class="tool-btn view-mode-btn" title="Presentation Mode (p)">🖼️</button>
+      </div>
+      <button id="searchToggleBtn" class="tool-btn" title="Search (Ctrl+F)">🔎</button>
+      <button id="themeToggleBtn" class="tool-btn" title="Toggle Theme">🌙</button>
+      <button id="fullscreenBtn" class="tool-btn" title="Fullscreen (f)">⛶</button>
+    </div>
+  </header>
+
+  <!-- Floating small search box -->
+  <div id="searchOverlay" class="search-overlay">
+    <input type="text" id="searchInput" placeholder="Find..." />
+    <button id="searchPrevBtn" class="tool-btn" title="Previous (Shift+Enter)">↑</button>
+    <button id="searchNextBtn" class="tool-btn" title="Next (Enter)">↓</button>
+    <span id="searchResultCount" class="search-count"></span>
+    <button id="searchCloseBtn" class="tool-btn search-close-btn" title="Close (Esc)">✕</button>
+  </div>
+
+  <!-- Custom right-click context menu -->
+  <div id="contextMenu" class="context-menu hidden">
+    <button data-action="google" class="context-menu-item">🔎 Search Google</button>
+    <button data-action="bing" class="context-menu-item">🔎 Search Bing</button>
+    <button data-action="highlight" class="context-menu-item">🖍️ Highlight</button>
+    <button data-action="copy" class="context-menu-item">📋 Copy</button>
+    <button data-action="share" class="context-menu-item">🔗 Share</button>
+  </div>
+
+  <!-- Help / Shortcuts modal -->
+  <div id="helpModal" class="help-modal hidden">
+    <div class="help-modal-box">
+      <div class="help-modal-header">
+        <span>Keyboard Shortcuts</span>
+        <button id="helpCloseBtn" class="tool-btn">✕</button>
+      </div>
+      <div class="help-modal-body" id="helpModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN VIEWER AREA ===================== -->
+  <main id="viewerContainer" class="viewer-container">
+    <div id="dropOverlay" class="drop-overlay"><p>📄 Drop your PDF file here</p></div>
+
+    <div id="emptyState" class="empty-state">
+      <img src="assets/logo.png" alt="Vision Reader" class="empty-logo" />
+      <h2>No PDF Opened</h2>
+      <p>Click 📂 Open or drag & drop a PDF file to start reading.</p>
+    </div>
+
+    <div id="loadingSpinner" class="loading-spinner hidden">
+      <div class="spinner"></div>
+      <p>Loading PDF...</p>
+    </div>
+
+    <div id="errorMessage" class="error-message hidden">
+      <p id="errorText">Something went wrong while loading the PDF.</p>
+      <button id="errorCloseBtn" class="tool-btn">Close</button>
+    </div>
+
+    <div id="canvasWrapper" class="canvas-wrapper hidden">
+      <canvas id="pdfCanvas"></canvas>
+      <div id="textLayer" class="text-layer"></div>
+    </div>
+    <!-- #continuousContainer is built dynamically by script.js -->
+  </main>
+
+  <footer class="status-bar">
+    <span id="fileNameDisplay" class="file-name">No file loaded</span>
+    <span id="statusMessage" class="status-message"></span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
